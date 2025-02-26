@@ -1,0 +1,97 @@
+---
+title: "mt_genome_visualization"
+author: "JY"
+date: "2025-02-26"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+```
+# Preprocessing data
+
+```{r}
+mt_DNA <- read.delim("../input/size_GC_gene_summary.tab", header = TRUE, stringsAsFactors = FALSE)
+
+# separate Assembly into Genus and Species name
+mt_DNA <- mt_DNA %>% 
+  mutate(Assembly = gsub("\\.", "_", Assembly)) %>% 
+  mutate(Assembly = gsub("__", "_", Assembly)) %>% 
+  separate(Assembly, into = c("Genus", "Species", "Entry"), sep = "[_]")
+
+# deal with missing value in Entry column
+mt_DNA <- mt_DNA %>%
+  mutate(Entry = ifelse(is.na(Entry), "Not_Available", Entry))
+
+
+```
+
+
+#Plot the scatter plot for GC content vs genome size
+
+```{r}
+# define a function to draw scatter plot
+plot_genomes_by_order <- function(mt_DNA, Order = NULL, Genus = NULL, Color) {
+  plot_data <- mt_DNA
+  
+  # If Order is provided, filter by the given Order
+  if (!is.null(Order)) {
+    plot_data <- plot_data %>% filter(Order == !!Order)  # Proper filtering
+  }
+  
+  if (!is.null(Genus)) {
+    plot_data <- plot_data %>% filter(Genus == !!Genus)
+
+  }
+  # Create the plot
+  ggplot(plot_data, aes(x = GC, y = Total_length, color = .data[[Color]])) +
+    geom_point(alpha = 0.9) +  # Points with slight transparency
+    scale_color_viridis_d(option = "H") +  # Use viridis color scale
+    labs(title = ifelse(is.null(Order), "All Orders", Order), 
+         x = "GC Content %", 
+         y = "Genome size (bps)") +
+    theme_minimal()  # Clean theme
+}
+
+
+# all Saccharomycotina
+plot_genomes_by_order(mt_DNA, Color = "Order")
+# Saccharomycetales
+plot_genomes_by_order(mt_DNA, Order = "Saccharomycetales", Color = "Genus")
+
+## Genus level
+# Saccharomyces
+plot_genomes_by_order(mt_DNA, Genus = "Saccharomyces", Color = "Genus")
+
+
+# Candida
+plot_genomes_by_order(mt_DNA, Genus = "Candida", Color = "Genus")
+```
+
+# By specific genus or order clade
+```{r}
+# all Saccharomycotina
+ggplot(mt_DNA, aes(x = GC, y = Total_length, color = Order)) +
+  geom_point(alpha = 0.7) +  # Blue points with slight transparency
+  scale_color_viridis_d(option = "B") +
+  labs(title = "Saccharomycotina", 
+       x = "GC Content %", 
+       y = "Genome size (bps)") +
+  theme_minimal()  # Clean theme
+
+# Saccharomycetales
+mt_DNA %>% filter(Order == "Saccharomycetales") %>% 
+  ggplot(., aes(x = GC, y = Total_length, color = Genus)) +
+  geom_point(alpha = 0.9) +  # Blue points with slight transparency
+  scale_color_viridis_d(option = "H") +
+  labs(title = "Saccharomycetales", 
+       x = "GC Content %", 
+       y = "Genome size (bps)") +
+  theme_minimal()  # Clean theme
+
+# Saccharomyces
+
+
+```
